@@ -1,0 +1,22 @@
+{
+    "configurations": [
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug timeline-list-sync",
+            "program": "${workspaceFolder:timeline-list-sync}/.build/debug/timeline-list-sync",
+            "args": [],
+            "cwd": "${workspaceFolder:timeline-list-sync}",
+            "preLaunchTask": "swift: Build Debug timeline-list-sync"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Release timeline-list-sync",
+            "program": "${workspaceFolder:timeline-list-sync}/.build/release/timeline-list-sync",
+            "args": [],
+            "cwd": "${workspaceFolder:timeline-list-sync}",
+            "preLaunchTask": "swift: Build Release timeline-list-sync"
+        }
+    ]
+}
