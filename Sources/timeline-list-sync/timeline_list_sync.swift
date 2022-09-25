@@ -10,21 +10,23 @@ import TwitterAPIKit
 
 @main
 public struct TimelineListSync {
-    public private(set) var text = "Hello, World!"
-    private static let apiKey = ProcessInfo.processInfo.environment["TWITTER_API_KEY"]
-    private static let apiSecret = ProcessInfo.processInfo.environment["TWITTER_API_SECRET"]
-    private static let accessToken = ProcessInfo.processInfo.environment["TWITTER_ACCESS_TOKEN"]
-    private static let accessTokenSecret = ProcessInfo.processInfo.environment["TWITTER_ACCESS_TOKEN_SECRET"]
-    
-    
-    public static func main() {
-        print(TimelineListSync().text)
 
-        let client = TwitterAPIClient(.oauth10a(.init(
-            consumerKey: apiKey!,
-            consumerSecret: apiSecret!,
-            oauthToken: accessToken!,
-            oauthTokenSecret: accessTokenSecret!
-        )))
+
+    public static func main() {
+        let apiKey = ProcessInfo.processInfo.environment["TWITTER_CK"] ?? ""
+        let apiSecret = ProcessInfo.processInfo.environment["TWITTER_CS"] ?? ""
+        let accessToken = ProcessInfo.processInfo.environment["TWITTER_AT"] ?? ""
+        let accessTokenSecret = ProcessInfo.processInfo.environment["TWITTER_AS"] ?? ""
+
+        let clientManager = ClientManager(
+                                                            apiKey: apiKey,
+                                                            apiSecret: apiSecret,
+                                                            accessToken: accessToken,
+                                                            accessTokenSecret: accessTokenSecret
+                                                        )
+
+        let client = clientManager.client.v1
+
+
     }
 }
