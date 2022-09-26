@@ -11,7 +11,6 @@ import TwitterAPIKit
 @main
 public struct TimelineListSync {
 
-
     public static func main() {
         let apiKey = ProcessInfo.processInfo.environment["TWITTER_CK"] ?? ""
         let apiSecret = ProcessInfo.processInfo.environment["TWITTER_CS"] ?? ""
@@ -32,63 +31,59 @@ public struct TimelineListSync {
 
         Task.detached {
 
-            do {
-                // try await getFollowingUsers(client: client, screenName: screenName)
+            try await getList(client: client)
 
-                try await getList(client: client)
+            let oldListResponse = await client.v1.getList(.init(list: .listID(listID)))
+                .responseDecodable(type: TwitterListV1.self)
 
-                let oldListResponse = await client.v1.getList(.init(list: .listID(listID)))
+            var oldList: TwitterListV1?
+
+            if let error = oldListResponse.error {
+                print(error)
+            } else {
+                oldList = oldListResponse.success!
+            }
+
+            let friends = try await getFollowingUsers(client: client, screenName: screenName)
+
+            let listMembers = try await getListMembers(client: client, id: listID)
+            let users = listMembers.users
+
+            var listedUserIDs: [String] = []
+
+            for user in users {
+                listedUserIDs.append(user.id)
+            }
+
+            var ids: [String] = []
+
+            for id in friends.ids {
+
+                if !listedUserIDs.contains(String(id)) {
+
+                    ids.append(String(id))
+                    print(String(id))
+
+                    if ids.count>=100 { break }
+                }
+            }
+
+            if ids.count>0 {
+                print("Trying to add \(ids.count) users into list")
+                let res = await client.v1.postAddListMembers(.init(list: .listID(listID), users: .userIDs(ids)))
                     .responseDecodable(type: TwitterListV1.self)
 
-                var oldList: TwitterListV1?
-
-                if let error = oldListResponse.error {
+                if let error = res.error {
                     print(error)
                 } else {
-                    oldList = oldListResponse.success!
-                }
 
-                let friends = try await getFollowingUsers(client: client, screenName: screenName)
+                    let list = res.success!
 
-                let listMembers = try await getListMembers(client: client, id: listID)
-                let users = listMembers.users
-
-                var listedUserIDs: [String] = []
-
-                for user in users {
-                    listedUserIDs.append(user.id)
-                }
-
-                var ids: [String] = []
-
-                for id in friends.ids {
-
-                    if !listedUserIDs.contains(String(id)) {
-
-                        ids.append(String(id))
-                        print(String(id))
-
-                        if ids.count>=100 { break }
-
+                    if list.memberCount<=oldList!.memberCount {
+                        print("Error!: Failed adding users into the list...")
                     }
                 }
-
-                if ids.count>0 {
-                    print("Trying to add \(ids.count) users into list")
-                    let res = await client.v1.postAddListMembers(.init(list: .listID(listID), users: .userIDs(ids)))
-                        .responseDecodable(type: TwitterListV1.self)
-
-                    if let error = res.error {
-                        print(error)
-                    } else {
-
-                        let list = res.success!
-
-                        if list.memberCount<=oldList!.memberCount {
-                            print("Error!: Failed adding users into the list...")
-                        }
-                    }
-                }
+                exit(0)
             }
 
             // try await getList(client: client)
@@ -104,7 +99,7 @@ func addUsersToList(client: TwitterAPIClient, list: String, users: [String]) asy
 
     if let error = result.error {
         print(error)
-    }else {
+    } else {
         print(result)
     }
 }
