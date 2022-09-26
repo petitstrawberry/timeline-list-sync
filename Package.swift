@@ -6,7 +6,7 @@ import PackageDescription
 let package = Package(
     name: "timeline-list-sync",
     platforms: [
-        .macOS(.v10_14),
+        .macOS(.v10_15),
         .iOS(.v12),
         .tvOS(.v12),
         .watchOS(.v6)
