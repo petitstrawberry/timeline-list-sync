@@ -18,7 +18,7 @@ public struct TimelineListSync {
         let accessToken = ProcessInfo.processInfo.environment["TWITTER_AT"] ?? ""
         let accessTokenSecret = ProcessInfo.processInfo.environment["TWITTER_AS"] ?? ""
 
-        let list = ProcessInfo.processInfo.environment["TWITTER_LIST_ID"] ?? ""
+        let listID = ProcessInfo.processInfo.environment["TWITTER_LIST_ID"] ?? ""
         let screenName = ProcessInfo.processInfo.environment["TWITTER_SCREEN_NAME"] ?? ""
 
         let clientManager = ClientManager(
@@ -35,46 +35,61 @@ public struct TimelineListSync {
             do {
                 // try await getFollowingUsers(client: client, screenName: screenName)
 
-                let friends = try await getFollowingUsers(client: client, screenName: screenName)
+                try await getList(client: client)
 
-                let listMembers = try await getListMembers(client: client, id: list)
-                let users = listMembers.users
+                let oldListResponse = await client.v1.getList(.init(list: .listID(listID)))
+                    .responseDecodable(type: TwitterListV1.self)
 
-                var listIDs: [String] = []
+                var oldList: TwitterListV1?
 
-                for user in users {
-
-                    listIDs.append(user.id)
+                if let error = oldListResponse.error {
+                    print(error)
+                } else {
+                    oldList = oldListResponse.success!
                 }
 
+                let friends = try await getFollowingUsers(client: client, screenName: screenName)
+
+                let listMembers = try await getListMembers(client: client, id: listID)
+                let users = listMembers.users
+
+                var listedUserIDs: [String] = []
+
+                for user in users {
+                    listedUserIDs.append(user.id)
+                }
 
                 var ids: [String] = []
-                var counter = 0
 
                 for id in friends.ids {
 
-                    if !listIDs.contains(String(id)) {
+                    if !listedUserIDs.contains(String(id)) {
 
                         ids.append(String(id))
-                        print(id)
-                        let res = await client.v1.postAddListMember(.init(list: .listID(list), user: .userID(String(id))))
-                            .responseDecodable(type: TwitterListV1.self)
+                        print(String(id))
 
-                        if let error = res.error {
-                            print(error)
-                            break
-                        } else {
-                            counter += 1
-                        }
-
-                        if counter>=50 { break }
+                        if ids.count>=100 { break }
 
                     }
+                }
 
+                if ids.count>0 {
+                    print("Trying to add \(ids.count) users into list")
+                    let res = await client.v1.postAddListMembers(.init(list: .listID(listID), users: .userIDs(ids)))
+                        .responseDecodable(type: TwitterListV1.self)
+
+                    if let error = res.error {
+                        print(error)
+                    } else {
+
+                        let list = res.success!
+
+                        if list.memberCount<=oldList!.memberCount {
+                            print("Error!: Failed adding users into the list...")
+                        }
+                    }
                 }
             }
-
-
 
             // try await getList(client: client)
         }
