@@ -19,11 +19,11 @@ public struct TimelineListSync {
         let accessTokenSecret = ProcessInfo.processInfo.environment["TWITTER_AS"] ?? ""
 
         let clientManager = ClientManager(
-                                                            apiKey: apiKey,
-                                                            apiSecret: apiSecret,
-                                                            accessToken: accessToken,
-                                                            accessTokenSecret: accessTokenSecret
-                                                        )
+            apiKey: apiKey,
+            apiSecret: apiSecret,
+            accessToken: accessToken,
+            accessTokenSecret: accessTokenSecret
+        )
 
         let client = clientManager.client.v1
 
