@@ -80,7 +80,11 @@ public struct TimelineListSync {
                     let list = res.success!
 
                     if list.memberCount<=oldList!.memberCount {
-                        print("Error!: Failed adding users into the list...")
+                        if list.memberCount-oldList!.memberCount>0 {
+                            print("Added \(list.memberCount-oldList!.memberCount) users")
+                        } else {
+                            print("Error: Failed adding users into the list...")
+                        }
                     }
                 }
                 exit(0)
