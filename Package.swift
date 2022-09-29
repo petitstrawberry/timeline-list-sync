@@ -22,8 +22,8 @@ let package = Package(
         .executableTarget(
             name: "timeline-list-sync",
             dependencies: ["TwitterAPIKit"]),
-        .testTarget(
-            name: "timeline-list-syncTests",
-            dependencies: ["timeline-list-sync"]),
+        // .testTarget(
+        //     name: "timeline-list-syncTests",
+        //     dependencies: ["timeline-list-sync"]),
     ]
 )

@@ -16,7 +16,6 @@ public struct TimelineListSync {
         let apiSecret = ProcessInfo.processInfo.environment["TWITTER_CS"] ?? ""
         let accessToken = ProcessInfo.processInfo.environment["TWITTER_AT"] ?? ""
         let accessTokenSecret = ProcessInfo.processInfo.environment["TWITTER_AS"] ?? ""
-
         let listID = ProcessInfo.processInfo.environment["TWITTER_LIST_ID"] ?? ""
         let screenName = ProcessInfo.processInfo.environment["TWITTER_SCREEN_NAME"] ?? ""
 
@@ -29,98 +28,21 @@ public struct TimelineListSync {
 
         let client = clientManager.client
 
-        Task.detached {
-
-            try await getList(client: client)
-
-            let oldListResponse = await client.v1.getList(.init(list: .listID(listID)))
-                .responseDecodable(type: TwitterListV1.self)
-
-            var oldList: TwitterListV1?
-
-            if let error = oldListResponse.error {
-                print(error)
+        Task {
+            // リスト指定してなかったら一覧表示
+            if listID=="" {
+                try await printLists(client: client)
             } else {
-                oldList = oldListResponse.success!
+                try await removeMemberFromList(client: client, listID: listID, screenName: screenName)
+                try await addFriendsIntoList(client: client, listID: listID, screenName: screenName)
             }
-
-            let friends = try await getFollowingUsers(client: client, screenName: screenName)
-
-            let listMembers = try await getListMembers(client: client, id: listID)
-            let users = listMembers.users
-
-            var listedUserIDs: [String] = []
-
-            for user in users {
-                listedUserIDs.append(user.id)
-            }
-
-            var ids: [String] = []
-
-            for id in friends.ids {
-
-                if !listedUserIDs.contains(String(id)) {
-
-                    ids.append(String(id))
-                    print(String(id))
-
-                    if ids.count>=100 { break }
-                }
-            }
-
-            if ids.count>0 {
-                print("Trying to add \(ids.count) users into list")
-                let res = await client.v1.postAddListMembers(.init(list: .listID(listID), users: .userIDs(ids)))
-                    .responseDecodable(type: TwitterListV1.self)
-
-                if let error = res.error {
-                    print(error)
-                } else {
-
-                    let list = res.success!
-
-                    if list.memberCount<=oldList!.memberCount {
-                        if list.memberCount-oldList!.memberCount>0 {
-                            print("Added \(list.memberCount-oldList!.memberCount) users")
-                        } else {
-                            print("Error: Failed adding users into the list...")
-                        }
-                    }
-                }
-                exit(0)
-            }
-
-            // try await getList(client: client)
         }
 
         RunLoop.main.run()
     }
 }
 
-func addUsersToList(client: TwitterAPIClient, list: String, users: [String]) async {
-    let result = await client.v1.postAddListMembers(.init(list: .listID(list), users: .userIDs(users)))
-        .responseDecodable(type: TwitterListV1.self)
-
-    if let error = result.error {
-        print(error)
-    } else {
-        print(result)
-    }
-}
-
-func getFollowingUsers(client: TwitterAPIClient, screenName: String) async throws -> TwitterFriendsIDsV1 {
-    let response = await client.v1.getFriendIDs(.init(user: .screenName(screenName)))
-        .responseDecodable(type: TwitterFriendsIDsV1.self)
-
-    if let error = response.error {
-        print(error)
-        throw error
-    } else {
-        return response.success!
-    }
-}
-
-func getList(client: TwitterAPIClient) async throws {
+func printLists(client: TwitterAPIClient) async throws {
     let response = await client.v1.getLists(.init(user: .userID("petitstb")))
         .responseDecodable(type: [TwitterListV1].self)
 
@@ -128,11 +50,114 @@ func getList(client: TwitterAPIClient) async throws {
         print(error)
         throw error
     } else {
-
         for list in response.success! {
             print("\(list.id):  \(list.name), slug: \(list.slug), members: \(list.memberCount)")
-
         }
+    }
+}
+
+func addFriendsIntoList(client: TwitterAPIClient, listID: String, screenName: String) async throws {
+    let friends = try await getFriends(client: client, screenName: screenName)
+    let listMembers = try await getListMembers(client: client, id: listID)
+
+    let users = listMembers.users
+    var listedUserIDs: [String] = []
+    for user in users {
+        listedUserIDs.append(user.id)
+    }
+
+    print("Start adding friends into list: \(listID) (\(users.count) members)")
+
+    var count = 0
+    for id in friends.ids {
+
+        if !listedUserIDs.contains(String(id)) {
+
+            print("Adding \(String(id))")
+            // リストへ追加のリクエスト
+            let response = await client.v1.postAddListMember(
+                .init(
+                    list: .listID(listID),
+                    user: .userID(String(id))
+                )
+            ).responseDecodable(type: TwitterListV1.self)
+
+            if let error = response.error {
+                print(error)
+                break
+            } else {
+                print("success! \(response.success!.memberCount) users")
+            }
+
+            count += 1
+            if count>=100 { break }
+
+            sleep(1)
+        }
+
+    }
+
+    print("Added \(count)/ \(friends.ids.count) users")
+}
+
+func removeMemberFromList(client: TwitterAPIClient, listID: String, screenName: String) async throws {
+    let friends = try await getFriends(client: client, screenName: screenName)
+    let listMembers = try await getListMembers(client: client, id: listID)
+
+    let users = listMembers.users
+    var listedUserIDs: [Int] = []
+    for user in users {
+        listedUserIDs.append(Int(user.id)!)
+    }
+
+    print("Start removing non-frined members from list: \(listID)")
+
+    var count = 0
+    for id in listedUserIDs {
+
+        if !friends.ids.contains(id) {
+
+            print("Removing \(String(id))")
+            // リストから削除のリクエスト
+            let response = await client.v1.postRemoveListMember(
+                .init(
+                    list: .listID(listID),
+                    user: .userID(String(id))
+                )
+            ).responseDecodable(type: TwitterListV1.self)
+
+            if let error = response.error {
+                print(error)
+                break
+            } else {
+                print("success! \(response.success!.memberCount) users")
+            }
+
+            count += 1
+            if count>=100 { break }
+
+            sleep(1)
+        }
+
+    }
+
+    print("Removed \(count)/ \(listedUserIDs.count) users")
+}
+
+func getFriends(client: TwitterAPIClient, screenName: String) async throws -> TwitterFriendsIDsV1 {
+    let response = await client.v1.getFriendIDs(
+            .init(
+                user: .screenName(screenName),
+                count: 5000
+            )
+        )
+        .responseDecodable(type: TwitterFriendsIDsV1.self)
+
+    if let error = response.error {
+        print(error)
+        throw error
+    } else {
+        return response.success!
     }
 }
 
@@ -145,7 +170,10 @@ func getListMembers(client: TwitterAPIClient, id: String) async throws -> Twitte
     } else {
         // print(listResponse.success!.memberCount)
         let response = await client.v1.getListMembers(
-            .init(list: .listID(id))
+            .init(
+                list: .listID(id),
+                count: 5000
+            )
         )
             .responseDecodable(type: TwitterListMembersV1.self)
 
@@ -155,63 +183,5 @@ func getListMembers(client: TwitterAPIClient, id: String) async throws -> Twitte
         } else {
             return response.success!
         }
-    }
-
-
-}
-
-struct TwitterListV1: Decodable {
-    var id: String
-    var slug: String
-    var name: String
-    var memberCount: Int
-    var description: String
-    var user: TwitterUserV1
-
-    enum CodingKeys: String, CodingKey {
-        case id = "idStr"
-        case slug
-        case name
-        case memberCount
-        case description
-        case user
-    }
-}
-
-struct TwitterListMembersV1: Decodable {
-    var users: [TwitterUserV1]
-}
-
-struct TwitterFriendsIDsV1: Decodable {
-    var ids: [Int]
-}
-
-struct TwitterStatusV1: Decodable {
-    var id: String
-    var text: String
-    var createdAt: Date
-    var user: TwitterUserV1
-
-    enum CodingKeys: String, CodingKey {
-        case id = "idStr"
-        case text
-        case createdAt
-        case user
-    }
-}
-
-struct TwitterUserV1: Decodable {
-    var id: String
-    var name: String
-    var screenName: String
-    var createdAt: Date
-    var statusesCount: Int
-
-    enum CodingKeys: String, CodingKey {
-        case id = "idStr"
-        case name
-        case screenName
-        case createdAt
-        case statusesCount
     }
 }
