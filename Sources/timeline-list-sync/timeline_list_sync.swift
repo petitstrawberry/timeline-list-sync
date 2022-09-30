@@ -41,9 +41,16 @@ public struct TimelineListSync {
                     print(error)
                     throw error
                 } else {
+                    var errorDesc = ""
                     let userID = response.success!.id
-                    try await removeMemberFromList(client: client, listID: listID, userID: userID)
-                    try await addFriendsIntoList(client: client, listID: listID, userID: userID)
+
+                    do {
+                        try await removeMemberFromList(client: client, listID: listID, userID: userID)
+                        try await addFriendsIntoList(client: client, listID: listID, userID: userID)
+                    } catch {
+                        print(error)
+                        errorDesc = error.localizedDescription
+                    }
 
                     let formatter = DateFormatter()
                     formatter.dateFormat = "yyyy-MM-dd' 'HH:mm:ss"
@@ -52,7 +59,7 @@ public struct TimelineListSync {
                     try await updateListDesc(
                         client: client,
                         listID: listID,
-                        desc: "last sync: \(formatter.string(from: now))"
+                        desc: "last sync: \(formatter.string(from: now))\n\(errorDesc)"
                     )
                     exit(0)
                 }
