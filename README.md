@@ -21,7 +21,7 @@ sudo cp .build/release/timeline-list-sync /usr/local/bin/
 ```.env_sample```を参考に.envファイルにAPI Keyなどを書いて設定する。
 
 ```
-cp .env_sample ~/timeline-list-sync.env
+cp .env_sample ~/.timeline-list-sync.env
 ```
 
 編集する.
@@ -33,7 +33,7 @@ cp .env_sample ~/timeline-list-sync.env
 ### 3. 実行する
 
 ```
-source ~/timeline-list-sync.env
+source ~/.timeline-list-sync.env
 timeline-list-sync
 ```
 
@@ -44,5 +44,5 @@ timeline-list-sync
 下の例では30分間隔
 
 ```
-*/30 * * * * source ~/timeline-list-sync.env > /usr/local/bin/timeline-list-sync
+*/30 * * * * source ~/.timeline-list-sync.env > /usr/local/bin/timeline-list-sync
 ```
