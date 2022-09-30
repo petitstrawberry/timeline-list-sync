@@ -6,7 +6,7 @@ import PackageDescription
 let package = Package(
     name: "timeline-list-sync",
     platforms: [
-        .macOS(.v10_14),
+        .macOS(.v10_15),
         .iOS(.v12),
         .tvOS(.v12),
         .watchOS(.v6)
@@ -22,8 +22,8 @@ let package = Package(
         .executableTarget(
             name: "timeline-list-sync",
             dependencies: ["TwitterAPIKit"]),
-        .testTarget(
-            name: "timeline-list-syncTests",
-            dependencies: ["timeline-list-sync"]),
+        // .testTarget(
+        //     name: "timeline-list-syncTests",
+        //     dependencies: ["timeline-list-sync"]),
     ]
 )
