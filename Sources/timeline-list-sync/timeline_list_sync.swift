@@ -97,7 +97,7 @@ func addFriendsIntoList(client: TwitterAPIClient, listID: String, screenName: St
 
     }
 
-    print("Added \(count)/ \(friends.ids.count) users")
+    print("Added \(count)/ \(friends.ids.count - listedUserIDs.count) users")
 }
 
 func removeMemberFromList(client: TwitterAPIClient, listID: String, screenName: String) async throws {
