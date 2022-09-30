@@ -13,7 +13,7 @@ API叩きすぎてTwitterに怒られると、アカウントが一時的に制�
 
 ```
 swift build -c release
-sudo mv .build/release/timeline-list-sync /usr/local/bin/
+sudo cp .build/release/timeline-list-sync /usr/local/bin/
 ```
 
 ### 2. .envで設定する
@@ -21,7 +21,7 @@ sudo mv .build/release/timeline-list-sync /usr/local/bin/
 ```.env_sample```を参考に.envファイルにAPI Keyなどを書いて設定する。
 
 ```
-mv .env_sample ~/timeline-list-sync.env
+cp .env_sample ~/timeline-list-sync.env
 ```
 
 編集する.
