@@ -31,10 +31,22 @@ public struct TimelineListSync {
         Task {
             // リスト指定してなかったら一覧表示
             if listID=="" {
-                try await printLists(client: client)
+                try await printLists(client: client, screenName: screenName)
             } else {
-                try await removeMemberFromList(client: client, listID: listID, screenName: screenName)
-                try await addFriendsIntoList(client: client, listID: listID, screenName: screenName)
+
+                let response = await client.v1.getUser(.init(user: .screenName(screenName)))
+                    .responseDecodable(type: TwitterUserV1.self)
+
+                if let error = response.error {
+                    print(error)
+                    throw error
+                } else {
+                    let userID = response.success!.id
+                    try await removeMemberFromList(client: client, listID: listID, userID: userID)
+                    try await addFriendsIntoList(client: client, listID: listID, userID: userID)
+                    exit(0)
+                }
+
             }
         }
 
@@ -42,8 +54,8 @@ public struct TimelineListSync {
     }
 }
 
-func printLists(client: TwitterAPIClient) async throws {
-    let response = await client.v1.getLists(.init(user: .userID("petitstb")))
+func printLists(client: TwitterAPIClient, screenName: String) async throws {
+    let response = await client.v1.getLists(.init(user: .screenName(screenName)))
         .responseDecodable(type: [TwitterListV1].self)
 
     if let error = response.error {
@@ -51,13 +63,15 @@ func printLists(client: TwitterAPIClient) async throws {
         throw error
     } else {
         for list in response.success! {
-            print("\(list.id):  \(list.name), slug: \(list.slug), members: \(list.memberCount)")
+            print("\(list.id):  \(list.name), slug: \(list.slug), members: \(list.memberCount), user: \(list.user.screenName)")
         }
     }
 }
 
-func addFriendsIntoList(client: TwitterAPIClient, listID: String, screenName: String) async throws {
-    let friends = try await getFriends(client: client, screenName: screenName)
+func addFriendsIntoList(client: TwitterAPIClient, listID: String, userID: String) async throws {
+    var friends = try await getFriends(client: client, userID: userID)
+    friends.ids.append(Int(userID)!) // 自身を追加
+
     let listMembers = try await getListMembers(client: client, id: listID)
 
     let users = listMembers.users
@@ -100,8 +114,10 @@ func addFriendsIntoList(client: TwitterAPIClient, listID: String, screenName: St
     print("Added \(count)/ \(friends.ids.count - listedUserIDs.count) users")
 }
 
-func removeMemberFromList(client: TwitterAPIClient, listID: String, screenName: String) async throws {
-    let friends = try await getFriends(client: client, screenName: screenName)
+func removeMemberFromList(client: TwitterAPIClient, listID: String, userID: String) async throws {
+    var friends = try await getFriends(client: client, userID: userID)
+    friends.ids.append(Int(userID)!) // 自身を追加
+
     let listMembers = try await getListMembers(client: client, id: listID)
 
     let users = listMembers.users
@@ -144,10 +160,10 @@ func removeMemberFromList(client: TwitterAPIClient, listID: String, screenName: 
     print("Removed \(count)/ \(listedUserIDs.count) users")
 }
 
-func getFriends(client: TwitterAPIClient, screenName: String) async throws -> TwitterFriendsIDsV1 {
+func getFriends(client: TwitterAPIClient, userID: String) async throws -> TwitterFriendsIDsV1 {
     let response = await client.v1.getFriendIDs(
             .init(
-                user: .screenName(screenName),
+                user: .userID(userID),
                 count: 5000
             )
         )
