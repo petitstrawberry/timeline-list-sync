@@ -44,6 +44,16 @@ public struct TimelineListSync {
                     let userID = response.success!.id
                     try await removeMemberFromList(client: client, listID: listID, userID: userID)
                     try await addFriendsIntoList(client: client, listID: listID, userID: userID)
+
+                    let formatter = DateFormatter()
+                    formatter.dateFormat = "yyyy-MM-dd' 'HH:mm:ss"
+                    let now = Date()
+
+                    try await updateListDesc(
+                        client: client,
+                        listID: listID,
+                        desc: "last sync: \(formatter.string(from: now))"
+                    )
                     exit(0)
                 }
 
@@ -158,6 +168,25 @@ func removeMemberFromList(client: TwitterAPIClient, listID: String, userID: Stri
     }
 
     print("Removed \(count)/ \(listedUserIDs.count) users")
+}
+
+func updateListDesc(client: TwitterAPIClient, listID: String, desc: String) async throws {
+    let response = await client.v1.getList(.init(list: .listID(listID)))
+        .responseDecodable(type: TwitterListV1.self)
+
+        if let error = response.error {
+            print(error)
+            throw error
+        } else {
+            let response = await client.v1.postUpdateList(.init(list: .listID(listID), description: desc))
+                .responseDecodable(type: TwitterListV1.self)
+            if let error = response.error {
+                print(error)
+                throw error
+            } else {
+                print("Updated list desciption: \(desc)")
+            }
+        }
 }
 
 func getFriends(client: TwitterAPIClient, userID: String) async throws -> TwitterFriendsIDsV1 {
