@@ -44,5 +44,5 @@ timeline-list-sync
 下の例では30分間隔
 
 ```
-*/30 * * * * source ~/.timeline-list-sync.env > /usr/local/bin/timeline-list-sync
+*/30 * * * * source ~/.timeline-list-sync.env && /usr/local/bin/timeline-list-sync
 ```
